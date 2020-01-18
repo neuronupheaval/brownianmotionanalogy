@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+  <meta charset="utf-8">
+  <title>Brownian motion analogy of liquidity</title>
+  <style type="text/css">
+	.container { margin: 0; }
+	.canvases { display: inline-block; margin: 0 25px; padding: 0; }
+	.scoreboard { display: inline-block; width: 190px; height: 465px; margin: 0 25px; padding: 0; overflow-y: scroll }
+	.scoreboard ul { list-style-type: none }
+	#buttons { margin-bottom: 17px; }
+  </style>
+</head>
+
+<body style="font-family:sans-serif; font-size: 15px;">
+	<div class="container">
+		<div class="canvases">
+			<canvas id="myCanvas" width="500" height="465"></canvas>
+		</div>
+		<div id="scoreboard" class="scoreboard">
+			<ol id="olScores">
+			
+			</ol>
+		</div>
+		<div class="canvases">
+			<canvas id="histogram" width="230" height="465"></canvas>
+		</div>
+	</div>
+    <div id="buttons">
+      <input type="button" id="play" value="Play" onclick="play()" />
+      <input type="button" id="pause" value="Pause" onclick="pause()" />
+      <input type="button" id="reset" value="Reset" onclick="reset()" />
+	  <input type="button" id="smallParticle" value="Radius 10" onclick="particleSize(10)" />
+	  <input type="button" id="bigParticle" value="Radius 30" onclick="particleSize(30)" />
+    </div>
+	
+     <div id="tempSlider">
+      Temperature: Cold <input type="range" id="tempValue" min="0.6"
+      max="3.4" value="1" step="0.05" oninput="showTempValue(this.value)" onchange="showTempValue(this.value)" /> Hot &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+    </div>
+	
+	<div id="alephSlider">
+	    Aleph: 0.125 <input type="range" id="alephValue" min="0.125" max="0.5" value="0.125" step="0.125" onchange="alephChanged(this.value)" /> 0.500
+	</div>
+	
+   <div id="viewbuttons" style="margin-top: 10px">
+      <label for="score">Liquidity Threshold, Probable percentage of entirely magenta balls</label>
+      <input type="text" id="score" />
+   </div>
+
+  <script>
+      function alephChanged(newValue) {
+	      aleph = newValue;
+	  }
+  
+      function showNumberValue(newNumberValue)
+      {
+             //get the element
+             var display = document.getElementById("initialBallNumber");
+             //show the amount
+             display.innerHTML=newNumberValue;
+             numBalls = Number(newNumberValue);
+ //            reset();
+     }
+
+      function ballColor(newColor)
+      {
+             for (i=1; i<nBalls; i++) {
+              ball[i].color = newColor;
+             }
+      }
+	
+		function particleSize(size) {
+			myRadius = size;
+		}
+
+      function showTempValue(newTempValue)
+      {
+             speedFactor = Math.sqrt(Number(newTempValue));
+ //            reset();
+     }
+
+
+      function play() {
+        window.clearTimeout(timer);
+        runFlag = 1;
+        runMotion();
+
+      }
+
+      function pause() {
+        window.clearTimeout(timer);
+        runFlag = 0;
+
+      }
+
+      function stepForward() {
+        window.clearTimeout(timer);
+        runFlag = 1;
+        drawMotion();
+
+      }
+
+      function stepBack() {
+        window.clearTimeout(timer);
+        index = index-2;
+        if (index < -1) index = -1;
+        time = index/20;
+        if (x1 >= (xBase+400)) x1 = xBase + 400;
+        if (x1 < xBase) x1 = xBase;
+        runFlag = 1;
+        drawMotion();
+
+      }
+
+      function reset() {
+	    hBin = [0,0,0,0,0,0,0];
+        window.clearTimeout(timer);
+        index = -1;
+        time = 0.0;
+        x1 = xBase + 120;
+        theta = 0.0;
+        a1 = 0.0;
+        v1 = 1.0;
+        maxTime = 50;
+        numBalls = 200;
+		document.getElementById('olScores').innerHTML = '';
+        for (var i = 0; i < numBalls; i++) {
+          ball[i].xValue = centerX;
+          ball[i].yValue = centerY;
+		  if (i != 0) {
+			ball[i].stock = Math.random() * 255;
+			ball[i].rgb1 = 0;
+			ball[i].rgb2 = 255;
+			ball[i].color = 'rgb(' + Math.round(Math.min(ball[i].stock, 255)) + ',' + ball[i].rgb1 + ',' + ball[i].rgb2 + ')';
+		  }
+//          console.log("reset y = " + ball[i].yValue);
+        }
+        ball[0].deltaX = -1.0+2.0*Math.random();
+        ball[0].deltaY = -1.0+2.0*Math.random();
+		ball[0].radius = myRadius;
+
+        for (var i = 0; i < numBalls; i++) {
+          for (var j = 0; j< nBalls; j++) {
+            oldOverlap[i][j] = 1;
+          }
+        }
+        pushIndex = -1;
+
+        runFlag = 1;
+        runMotion();
+
+      }
+
+      var aleph = 0.125;
+      var canvas = document.getElementById("myCanvas");
+      var context = canvas.getContext("2d");
+	  var histogram = document.getElementById("histogram");
+	  var hcontext = histogram.getContext("2d");
+	  var hBin = [ 0, 0, 0, 0, 0, 0, 0 ];	// 0: 1-50, 1: 51-100, 2: 101-150, 3: 151-200, 4: 201-250, 5: 251-300, 6: 301-infinite
+
+      var index = -1;
+      var xBase = 180;
+      var yBase = 260;
+      var xBase2 = 140;
+      var yBase2 = 60;
+      var xInit = 37;
+      var graphType = 1;
+      var simTitle = 'Brownian motion';
+      var graphTitle = 'Speed distribution';
+      var yAxisTitle = 'number';
+//      var slope = 0.4;
+      var yIncrement = 20;
+      var xIncrement = 0.4;
+      var yNumDecimals = 0;
+      var xNumDecimals = 1;
+
+	  var scoreCounter = 0;
+      var time = 0.0;
+      var timer;
+      var runFlag = 1;
+
+      var deltaT = 0.02;
+      var numBalls = 200;
+//      var boxSize = 400;
+      var boxHeight = 400;
+      var boxWidth = 400;
+      var centerX = canvas.width/2;
+      var centerY = 235;
+      var ballRadius = 5;
+      var redness;
+      var greenness;
+      var blueness;
+      var redString = "0";
+      var greenString = "0";
+      var blueString = "0";
+      var colorString = "0";
+
+      var tempNumber;
+      var tempRed;
+      var tempGreen;
+      var tempBlue;
+      var tempTrans;
+      var tempSpeed;
+	  
+	  var score = 0;
+
+      var nBalls = 301;
+      var ball = new Array(nBalls+1);
+      for (var i = 0; i <= nBalls; i++) {
+        ball[i] = {};
+        ball[i].xValue = centerX;
+        ball[i].yValue = centerY;
+        ball[i].deltaX = -1.0+2.0*Math.random();
+        ball[i].deltaY = -1.0+2.0*Math.random();
+        ball[i].radius = ballRadius;
+ //       		console.log("x = " + ball[i].xValue);
+
+		ball[i].stock = Math.random() * 255;
+		ball[i].rgb1 = 0;
+		ball[i].rgb2 = 255;
+		ball[i].color = 'rgb(' + Math.round(Math.min(ball[i].stock, 255)) + ',' + ball[i].rgb1 + ',' + ball[i].rgb2 + ')';
+      }
+
+	  var myRadius = 14;
+      ball[0].color = "red";
+      ball[0].radius = myRadius;
+
+      var speedFactor = 1;
+      var useRandomColors;
+      var ballsCollide;
+      var vxi;
+      var vyi;
+      var vxj;
+      var vyj;
+      var sinTheta;
+      var cosTheta;
+      var distance;
+      var diamSq = 2*ballRadius*2*ballRadius;
+      var cOfMX;
+      var cOfMY;
+      var overlap = create2DArray(nBalls,nBalls,0);
+      var oldOverlap = create2DArray(nBalls,nBalls,1);
+      var pushIndex = -1;
+      var nPath = 500000;
+      var dust = new Array(nPath);
+      for (var i = 0; i < nPath; i++) {
+        dust[i] = {};
+        dust[i].x = centerX;
+        dust[i].y = centerY;
+      }
+	  
+	  window.setInterval(function() {
+		var elem = document.getElementById('scoreboard');
+		elem.scrollTop = elem.scrollHeight;
+	  }, 600);
+
+      numBins = 20;
+      var speedHistogram = new Array(numBins);
+      for (var i = 0; i < numBins; i++) {
+        speedHistogram[i] = 0;
+      }
+
+      runMotion();
+
+    var previousScore = '50%';
+	
+    function drawMotion() {
+	  if (scoreCounter++ >= 330) {
+	      var color = 'lightgray';
+	      var sc = document.getElementById('score').value;
+		  var scInt = +sc.substring(0, sc.length - 1);
+		  var scPrv = +previousScore.substring(0, previousScore.length - 1);
+		  if (scInt > scPrv) {
+			color = 'green';
+		  } else if (scInt < scPrv) {
+		    color = 'red';
+		  }
+	      var ul = document.getElementById('olScores');
+		  var li = document.createElement('LI');
+		  li.style.color = color;
+		  var text = document.createTextNode(previousScore = sc);
+		  li.appendChild(text);
+		  ul.appendChild(li);
+		  
+		  scoreCounter = 0;
+	  }
+	  
+      ball[0].radius = myRadius;
+//    console.log("In the drawMotion function, with runFlag = " + runFlag );
+
+      if (time >= 50) runFlag = 0;
+
+//    console.log("In the drawMotion function, with runFlag = " + runFlag + " xBase = " + xBase + " x2 = " + x2 + " time = " + time);
+
+      if (runFlag == 1) {    //      run if runFlag equal 1, not if equal 0
+        // clear
+        context.clearRect(0, 0, canvas.width, canvas.height);
+		hcontext.clearRect(0, 0, histogram.width, histogram.height);
+
+        index = index + 1;
+
+        // set background color for the entire thing
+           context.fillStyle = "#0b6";
+           context.fillRect(0, 0, canvas.width, canvas.height);
+           hcontext.fillStyle = "#0b6";
+           hcontext.fillRect(0, 0, histogram.width, histogram.height);
+
+//    console.log("drawing background");
+
+        // set background color for the box of gas
+           context.fillStyle = "#fff";
+           context.fillRect(centerX-0.5*boxWidth, centerY-0.5*boxHeight, boxWidth, boxHeight);
+
+
+        if ((index>400) && (pushIndex == -1)) pushIndex = 0;
+
+// check to see if balls overlap
+
+	for (var i = 0; i<(nBalls-1); i++) {
+		for (var j = i+1; j<nBalls; j++) {
+			if (((ball[j].xValue-ball[i].xValue)*(ball[j].xValue-ball[i].xValue)+(ball[j].yValue-ball[i].yValue)*(ball[j].yValue-ball[i].yValue)) < (2*ball[j].radius*2*ball[i].radius)) {
+				overlap[i][j] = 1;
+			}
+			else {
+				overlap[i][j] = 0;
+			}
+		}
+	}
+
+// if a new overlap occurs, the balls collide - find the new velocities
+
+		for (var i = 0; i<(nBalls-1); i++) {
+			for (var j = i+1; j<nBalls; j++) {
+				if ((overlap[i][j] == 1) && (oldOverlap[i][j] == 0)) {
+					vxi = ball[i].deltaX;
+					vyi = ball[i].deltaY;
+					vxj = ball[j].deltaX;
+					vyj = ball[j].deltaY;
+					distance = Math.sqrt((ball[j].xValue-ball[i].xValue)*(ball[j].xValue-ball[i].xValue)+(ball[j].yValue-ball[i].yValue)*(ball[j].yValue-ball[i].yValue));
+					cosTheta = (ball[j].yValue-ball[i].yValue)/distance;
+					sinTheta = (ball[j].xValue-ball[i].xValue)/distance;
+					ball[i].deltaX = vxi + sinTheta*( -vxi*sinTheta + vxj*sinTheta - vyi*cosTheta + vyj*cosTheta);
+					//				deltaX[j] = vxj + sinTheta*( -vxj*sinTheta + vxi*sinTheta - vyj*cosTheta + vyi*cosTheta);
+					ball[j].deltaX = vxj + vxi - ball[i].deltaX;
+					ball[i].deltaY = vyi + cosTheta*( -vyi*cosTheta + vyj*cosTheta - vxi*sinTheta + vxj*sinTheta);
+					//				deltaY[j] = vyj + cosTheta*(-vyj*cosTheta + vyi*cosTheta - vxj*sinTheta + vxi*sinTheta);
+					ball[j].deltaY = vyj + vyi - ball[i].deltaY;
+				
+					increaseBallRedness(ball[j], i == 0 ? null : ball[i]);
+					//console.log('ball color = ' + ball[j].color);
+				}
+				oldOverlap[i][j] = overlap[i][j];
+				if (i != 0) {
+					ball[i].color = 'rgb(' + Math.round(Math.min(ball[i].stock, 255)) + ',' + ball[i].rgb1 + ',' + ball[i].rgb2 + ')';
+				}
+			}
+		}
+    
+
+// move and then draw the balls
+
+//	cOfMX = 0.0;
+//	cOfMY = 0.0;
+	score = 0;
+	hBin = [ 0, 0, 0, 0, 0, 0, 0 ];
+	for (var i = (nBalls-1); i>=0; i--) {
+		score += Math.min(ball[i].stock, 255);
+		
+		// update histogram
+		updateHistogram(ball[i].stock);
+		
+		ball[i].xValue = ball[i].xValue + speedFactor*ball[i].deltaX;
+//		console.log("x = " + ball[i].xValue);
+
+		ball[i].yValue = ball[i].yValue + speedFactor*ball[i].deltaY;
+//		cOfMX = cOfMX + ball[i].xValue;
+//		cOfMY = cOfMY + ball[i].yValue;
+//		currentPoint = CGPointMake(xValues[i], yValues[i]);
+		// code for bouncing off walls
+    if (ball[i].xValue > (centerX+0.5*boxWidth-ball[i].radius)) ball[i].deltaX = -Math.abs(ball[i].deltaX);
+    if (ball[i].xValue < (centerX-0.5*boxWidth+ball[i].radius)) ball[i].deltaX = Math.abs(ball[i].deltaX);
+    if (ball[i].yValue > (centerY+0.5*boxHeight-ball[i].radius)) ball[i].deltaY = -Math.abs(ball[i].deltaY);
+    if (ball[i].yValue < (centerY-0.5*boxHeight+ball[i].radius)) ball[i].deltaY = Math.abs(ball[i].deltaY);
+//		if (ball[i].xValue > (boxSize-ballRadius)) ball[i].deltaX = -Math.abs(ball[i].deltaX);
+//		if (ball[i].xValue < ballRadius) ball[i].deltaX = Math.abs(ball[i].deltaX);
+//		if (ball[i].yValue > (boxSize-ballRadius)) ball[i].deltaY = -Math.abs(ball[i].deltaY);
+//		if (ball[i].yValue < ballRadius) ball[i].deltaY = Math.abs(ball[i].deltaY);
+
+        context.fillStyle = ball[i].color;
+        context.strokeStyle = ball[i].color;
+	    context.beginPath();
+        context.arc(ball[i].xValue, ball[i].yValue, ball[i].radius, 0, 2 * Math.PI, false);
+        context.fill();
+//        context.stroke();
+    }
+	score /= nBalls;
+	document.getElementById('score').value = Math.round(score / 255.0 * 100.0) + '%';
+
+//    cOfMX = cOfMX/numBalls;
+//	cOfMY = cOfMY/numBalls;
+
+/*    if (pushIndex > -1) {
+      dust[pushIndex].x = ball[0].xValue;
+      dust[pushIndex].y = ball[0].yValue;
+      context.beginPath();
+      context.strokeStyle = "purple";
+      context.moveTo(dust[0].x,dust[0].y);
+      for (var i = 1; i <= pushIndex; i++) {
+        context.lineTo(dust[i].x,dust[i].y);
+      }
+      context.stroke();
+      pushIndex = pushIndex + 1;
+    }*/
+
+
+           // graph title
+           context.font = 'bold 16pt Calibri';
+           context.fillStyle = 'purple';
+           context.textAlign = 'center';
+           context.fillText(simTitle, (canvas.width)/2, 25);
+
+
+//        var timeLabel = 't = ';
+//        timeLabel = timeLabel + time.toFixed(3) + ' s';
+//        context.textAlign = 'left';
+//        context.fillText(timeLabel, xBase-60, 370);
+
+
+      }
+    }
+	
+	function updateHistogram(x) {
+	    var i;
+		var whichBin;
+	    if (x >= 301.0) {
+		    whichBin = 6;
+		} else {
+	        whichBin = Math.round(x / 50.0) % 7;
+		}
+		
+		hBin[whichBin] += 1;
+		
+		if (whichBin >= 4) {
+		    hcontext.fillStyle = 'magenta';
+		} else {
+            hcontext.fillStyle = 'blue';
+		}
+		hcontext.fillRect(8 + 30 * whichBin, histogram.height - 30, 10, -hBin[whichBin]);
+		
+		hcontext.font = "10px Verdana";
+		hcontext.fillText(50.0 * (whichBin + 1), 8 + 30 * whichBin, histogram.height - 8);
+	}
+
+    function increaseBallRedness(ball, theOtherBall) {
+		var io;
+		
+		if (theOtherBall === null) {
+			// theOtherBall is the bigParticle
+		    ball.stock *= 1.015125;
+			ball.stock += 10;
+//			console.log('Ball hit the big particle ' + ball.stock);
+		} else {
+			io = aleph * (ball.stock + theOtherBall.stock);
+			
+			if (Math.random() > 0.5) {
+			    if (ball.stock > io) {
+				    ball.stock -= io;
+					theOtherBall.stock += io;
+				}
+			} else {
+			    if (theOtherBall.stock > io) {
+				    theOtherBall.stock -= io;
+					ball.stock += io;
+				}
+			}
+		}
+		
+//		console.log('ball color = ' + ball.stock);
+//      	console.log('the other ball color = ' + (theOtherBall ? theOtherBall.stock : '-'));
+	}
+
+    function runMotion() {
+        drawMotion();
+        if (runFlag == 1) {
+          timer = window.setTimeout(runMotion, 20/60);
+        }
+      }
+
+
+function create2DArray(rows,columns,initialValue) {
+   var x = new Array(rows);
+   for (var i = 0; i < rows; i++) {
+       x[i] = new Array(columns);
+       for (var j = 0; j < columns; j++) {
+         x[i][j] = initialValue;
+       }
+   }
+   return x;
+}
+
+  </script>
+
+  <center><p>This is a simulation of Brownian motion (named for Robert Brown, but explained in some detail by Albert Einstein). Brownian motion is the apparently random motion of something like a dust particle in the air, driven by collisions with air molecules. The simulation allows you to show or hide the molecules, and it tracks the path of the particle. See if you think there is any dependence on temperature - you can control the temperature with the slider.</p></center>
+
+    <p>Simulation first posted on 8-9-2018. Written by Andrew Duffy</p>
+
+
+   <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />This <span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/InteractiveResource" rel="dct:type">work</span> by <span xmlns:cc="http://creativecommons.org/ns#" property="cc:attributionName">Andrew Duffy</span> is licensed under a <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.<br />This simulation can be found in the collection at <a xmlns:dct="http://purl.org/dc/terms/" href="http://physics.bu.edu/~duffy/classroom.html" rel="dct:source">http://physics.bu.edu/~duffy/classroom.html</a>.
+
+</body>
+</html>

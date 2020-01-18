@@ -171,7 +171,6 @@
       var simTitle = 'Brownian motion';
       var graphTitle = 'Speed distribution';
       var yAxisTitle = 'number';
-//      var slope = 0.4;
       var yIncrement = 20;
       var xIncrement = 0.4;
       var yNumDecimals = 0;
@@ -184,7 +183,6 @@
 
       var deltaT = 0.02;
       var numBalls = 200;
-//      var boxSize = 400;
       var boxHeight = 400;
       var boxWidth = 400;
       var centerX = canvas.width/2;
@@ -289,14 +287,10 @@
 	  }
 	  
       ball[0].radius = myRadius;
-//    console.log("In the drawMotion function, with runFlag = " + runFlag );
 
       if (time >= 50) runFlag = 0;
 
-//    console.log("In the drawMotion function, with runFlag = " + runFlag + " xBase = " + xBase + " x2 = " + x2 + " time = " + time);
-
       if (runFlag == 1) {    //      run if runFlag equal 1, not if equal 0
-        // clear
         context.clearRect(0, 0, canvas.width, canvas.height);
 		hcontext.clearRect(0, 0, histogram.width, histogram.height);
 
@@ -305,10 +299,8 @@
         // set background color for the entire thing
            context.fillStyle = "#0b6";
            context.fillRect(0, 0, canvas.width, canvas.height);
-           hcontext.fillStyle = "#0b6";
+           hcontext.fillStyle = "#fafafa";
            hcontext.fillRect(0, 0, histogram.width, histogram.height);
-
-//    console.log("drawing background");
 
         // set background color for the box of gas
            context.fillStyle = "#fff";
@@ -361,9 +353,6 @@
     
 
 // move and then draw the balls
-
-//	cOfMX = 0.0;
-//	cOfMY = 0.0;
 	score = 0;
 	hBin = [ 0, 0, 0, 0, 0, 0, 0 ];
 	for (var i = (nBalls-1); i>=0; i--) {
@@ -373,62 +362,47 @@
 		updateHistogram(ball[i].stock);
 		
 		ball[i].xValue = ball[i].xValue + speedFactor*ball[i].deltaX;
-//		console.log("x = " + ball[i].xValue);
 
 		ball[i].yValue = ball[i].yValue + speedFactor*ball[i].deltaY;
-//		cOfMX = cOfMX + ball[i].xValue;
-//		cOfMY = cOfMY + ball[i].yValue;
-//		currentPoint = CGPointMake(xValues[i], yValues[i]);
 		// code for bouncing off walls
     if (ball[i].xValue > (centerX+0.5*boxWidth-ball[i].radius)) ball[i].deltaX = -Math.abs(ball[i].deltaX);
     if (ball[i].xValue < (centerX-0.5*boxWidth+ball[i].radius)) ball[i].deltaX = Math.abs(ball[i].deltaX);
     if (ball[i].yValue > (centerY+0.5*boxHeight-ball[i].radius)) ball[i].deltaY = -Math.abs(ball[i].deltaY);
     if (ball[i].yValue < (centerY-0.5*boxHeight+ball[i].radius)) ball[i].deltaY = Math.abs(ball[i].deltaY);
-//		if (ball[i].xValue > (boxSize-ballRadius)) ball[i].deltaX = -Math.abs(ball[i].deltaX);
-//		if (ball[i].xValue < ballRadius) ball[i].deltaX = Math.abs(ball[i].deltaX);
-//		if (ball[i].yValue > (boxSize-ballRadius)) ball[i].deltaY = -Math.abs(ball[i].deltaY);
-//		if (ball[i].yValue < ballRadius) ball[i].deltaY = Math.abs(ball[i].deltaY);
 
         context.fillStyle = ball[i].color;
         context.strokeStyle = ball[i].color;
 	    context.beginPath();
         context.arc(ball[i].xValue, ball[i].yValue, ball[i].radius, 0, 2 * Math.PI, false);
         context.fill();
-//        context.stroke();
     }
 	score /= nBalls;
 	document.getElementById('score').value = Math.round(score / 255.0 * 100.0) + '%';
 
-//    cOfMX = cOfMX/numBalls;
-//	cOfMY = cOfMY/numBalls;
-
-/*    if (pushIndex > -1) {
-      dust[pushIndex].x = ball[0].xValue;
-      dust[pushIndex].y = ball[0].yValue;
-      context.beginPath();
-      context.strokeStyle = "purple";
-      context.moveTo(dust[0].x,dust[0].y);
-      for (var i = 1; i <= pushIndex; i++) {
-        context.lineTo(dust[i].x,dust[i].y);
-      }
-      context.stroke();
-      pushIndex = pushIndex + 1;
-    }*/
-
+	// update stock histogram chart
+	for (var j = 0; j < 7; ++j) {
+	    var barLabel;
+		if (j >= 4) {
+		    hcontext.fillStyle = 'magenta';
+		} else {
+            hcontext.fillStyle = 'blue';
+		}
+		if (j == 6) {
+		    barLabel = "301+";
+		} else {
+		    barLabel = 50.0 * (j + 1);
+		}
+		hcontext.fillRect(8 + 30 * j, histogram.height - 30, 10, -hBin[j]);
+		hcontext.font = "12px Verdana";
+		hcontext.fillText(barLabel, 8 + 30 * j, histogram.height - 8);
+		hcontext.fillText(hBin[j], 8 + 30 * j, histogram.height - hBin[j] - 32);
+	}
 
            // graph title
            context.font = 'bold 16pt Calibri';
            context.fillStyle = 'purple';
            context.textAlign = 'center';
            context.fillText(simTitle, (canvas.width)/2, 25);
-
-
-//        var timeLabel = 't = ';
-//        timeLabel = timeLabel + time.toFixed(3) + ' s';
-//        context.textAlign = 'left';
-//        context.fillText(timeLabel, xBase-60, 370);
-
-
       }
     }
 	
@@ -438,25 +412,15 @@
 	    if (x >= 301.0) {
 		    whichBin = 6;
 		} else {
-	        whichBin = Math.round(x / 50.0) % 7;
+	        whichBin = Math.floor(x / 50.0);
 		}
-		
 		hBin[whichBin] += 1;
-		
-		if (whichBin >= 4) {
-		    hcontext.fillStyle = 'magenta';
-		} else {
-            hcontext.fillStyle = 'blue';
-		}
-		hcontext.fillRect(8 + 30 * whichBin, histogram.height - 30, 10, -hBin[whichBin]);
-		
-		hcontext.font = "10px Verdana";
-		hcontext.fillText(50.0 * (whichBin + 1), 8 + 30 * whichBin, histogram.height - 8);
 	}
 
     function increaseBallRedness(ball, theOtherBall) {
 		var io;
-		
+		var mean;
+		var std;
 		if (theOtherBall === null) {
 			// theOtherBall is the bigParticle
 		    ball.stock *= 1.015125;
@@ -477,15 +441,12 @@
 				}
 			}
 		}
-		
-//		console.log('ball color = ' + ball.stock);
-//      	console.log('the other ball color = ' + (theOtherBall ? theOtherBall.stock : '-'));
 	}
 
     function runMotion() {
         drawMotion();
         if (runFlag == 1) {
-          timer = window.setTimeout(runMotion, 20/60);
+          timer = window.setTimeout(runMotion, 10);
         }
       }
 

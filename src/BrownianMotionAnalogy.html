@@ -11,6 +11,7 @@
 	.scoreboard { display: inline-block; width: 190px; height: 465px; margin: 0 25px; padding: 0; overflow-y: scroll }
 	.scoreboard ul { list-style-type: none }
 	#buttons { margin-bottom: 17px; }
+	span.tooltip { cursor: pointer; font-weight: bold; }
   </style>
 </head>
 
@@ -37,17 +38,18 @@
     </div>
 	<fieldset>
 		<legend>Actuators</legend>
-		<div>
-			<label>Monetary expansion criteria</label>&nbsp;|&nbsp;
+		<div id="expansion">
+			<label>Monetary expansion criteria</label>&nbsp;<span class="tooltip" title="How much money does a collision to the red ball give to the regular ball?">(?)</span>|&nbsp;
 			<label for="txtP">Proportional: </label><input type="text" id="txtP" value="1" size="6" onchange="pChanged(this.value)" />
 			<label for="txtB">Absolute: </label><input type="text" id="txtB" value="10" size="3" onchange="bChanged(this.value)" />
 		</div>
 		<div id="alephSlider">
-			Aleph (effective collision parameter) = <label id="lblAleph" style="font-weight: bold;">0.125</label>&nbsp;|&nbsp;&nbsp;0.125 <input type="range" id="alephValue" min="0.125" max="0.5" value="0.125" step="0.0625" onchange="alephChanged(this.value)" /> 0.500
+			Aleph (effective collision parameter) = <label id="lblAleph" style="font-weight: bold;">0.125</label>&nbsp;<span class="tooltip" title="When two regular balls collide, one of them gets (Aleph x the sum of money of the two balls) and the other one gets the remainder">(?)</span>|
+			&nbsp;&nbsp;0.125 <input type="range" id="alephValue" min="0.125" max="0.5" value="0.125" step="0.0625" onchange="alephChanged(this.value)" /> 0.500
 			</div>
 		</div>
 		<div id="tempSlider">
-			Temperature: Cold <input type="range" id="tempValue" min="0.6"
+			Temperature <span class="tooltip" title="How active the market is?">(?)</span>: Cold <input type="range" id="tempValue" min="0.6"
 			max="3.4" value="1" step="0.05" oninput="showTempValue(this.value)" onchange="showTempValue(this.value)" /> Hot
 		</div>
 	</fieldset>
@@ -413,8 +415,6 @@
 	
     function increaseBallRedness(ball, theOtherBall) {
 		var io;
-		var mean;
-		var std;
 		if (theOtherBall === null) {
 			// theOtherBall is the bigParticle
 		    ball.stock *= p;
@@ -458,7 +458,7 @@
 	}
   </script>
 
-<p>This is a simulation of Brownian motion (named for Robert Brown, but explained in some detail by Albert Einstein). Brownian motion is the apparently random motion of something like a dust particle in the air or a grain of polen in water, driven by collisions with molecules.</p>
+<p>This is a simulation of Brownian motion (named after Robert Brown and explained by Albert Einstein). Brownian motion is the apparent random motion of something like a dust particle in the air or a grain of polen in water, driven by collisions with molecules.</p>
 
 	<p>Simulation first posted on 8-9-2018. Written by Andrew Duffy, and adapted by Marcelo Shiniti Uchimura on January 19th, 2020.</p>
 

@@ -187,7 +187,6 @@
 	var yNumDecimals = 0;
 	var xNumDecimals = 1;
 
-	var scoreCounter = 0;
 	var time = 0.0;
 	var timer;
 	var runFlag = 1;
@@ -272,7 +271,7 @@
 	var previousScore = '50%';
 	
     function drawMotion() {
-		if (scoreCounter++ >= 330) {
+		if (index % 200 == 0) {
 			var color = 'lightgray';
 			var sc = document.getElementById('score').value;
 			var scInt = +sc.substring(0, sc.length - 1);
@@ -290,8 +289,6 @@
 			ul.appendChild(li);
 
 			document.getElementById('txtCollisionsPerCycle').value = collisionsPerCycle;
-
-			scoreCounter = 0;
 			collisionsPerCycle = 0;
 		}
 	  
@@ -446,10 +443,10 @@
 	    var i;
 		var whichBin;
 		if (ball !== null) {
-			if (ball.stock >= 1000.0) {
+			if (ball.stock >= 255.0) {
 				whichBin = 10;
 			} else {
-				whichBin = Math.floor(ball.stock / 100.0);
+				whichBin = Math.floor(ball.stock / 10);
 			}
 			wBin[whichBin] += 1;
 		}
